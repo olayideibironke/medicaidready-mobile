@@ -8,7 +8,7 @@
     "scheme": "medicaidreadymobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/icon.png",
       "bundleIdentifier": "com.djimean.medicaidreadymobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
