@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -102,6 +103,8 @@ export default function HomeScreen() {
   const [phase, setPhase] = useState<Phase>('quiz');
   const [step, setStep] = useState(1);
   const [state, setState] = useState('');
+  const [statePickerOpen, setStatePickerOpen] = useState(false);
+  const [stateSearch, setStateSearch] = useState('');
   const [householdSize, setHouseholdSize] = useState(1);
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [age, setAge] = useState('');
@@ -115,6 +118,16 @@ export default function HomeScreen() {
     () => US_STATES.find((item) => item.code === state)?.name ?? 'your state',
     [state]
   );
+
+  const filteredStates = useMemo(() => {
+    const query = stateSearch.trim().toLowerCase();
+
+    if (!query) return US_STATES;
+
+    return US_STATES.filter((item) => {
+      return item.name.toLowerCase().includes(query) || item.code.toLowerCase().includes(query);
+    });
+  }, [stateSearch]);
 
   const progress = Math.round((step / TOTAL_STEPS) * 100);
 
@@ -153,6 +166,12 @@ export default function HomeScreen() {
     }
 
     if (step > 1) setStep((current) => current - 1);
+  }
+
+  function handleSelectState(code: string) {
+    setState(code);
+    setStateSearch('');
+    setStatePickerOpen(false);
   }
 
   async function handleSubmitEmail() {
@@ -211,6 +230,8 @@ export default function HomeScreen() {
     setPhase('quiz');
     setStep(1);
     setState('');
+    setStateSearch('');
+    setStatePickerOpen(false);
     setHouseholdSize(1);
     setMonthlyIncome('');
     setAge('');
@@ -252,19 +273,66 @@ export default function HomeScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>What state do you live in?</Text>
                 <Text style={styles.hint}>Select your current state of residence.</Text>
-                <View style={styles.stateGrid}>
-                  {US_STATES.map((item) => (
-                    <Pressable
-                      key={item.code}
-                      onPress={() => setState(item.code)}
-                      style={[styles.stateButton, state === item.code && styles.stateButtonActive]}
-                    >
-                      <Text style={[styles.stateButtonText, state === item.code && styles.stateButtonTextActive]}>
-                        {item.name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+
+                <Pressable onPress={() => setStatePickerOpen(true)} style={styles.stateSelectButton}>
+                  <View>
+                    <Text style={styles.stateSelectLabel}>State</Text>
+                    <Text style={[styles.stateSelectValue, !state && styles.stateSelectPlaceholder]}>
+                      {state ? selectedStateName : 'Select your state'}
+                    </Text>
+                  </View>
+                  <Text style={styles.stateSelectArrow}>⌄</Text>
+                </Pressable>
+
+                <Modal
+                  visible={statePickerOpen}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setStatePickerOpen(false)}
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select your state</Text>
+                        <Pressable onPress={() => setStatePickerOpen(false)} style={styles.modalCloseButton}>
+                          <Text style={styles.modalCloseText}>×</Text>
+                        </Pressable>
+                      </View>
+
+                      <TextInput
+                        value={stateSearch}
+                        onChangeText={setStateSearch}
+                        autoCapitalize="words"
+                        placeholder="Search state..."
+                        placeholderTextColor="#8A99A8"
+                        style={styles.searchInput}
+                      />
+
+                      <ScrollView style={styles.statePickerList} keyboardShouldPersistTaps="handled">
+                        {filteredStates.map((item) => (
+                          <Pressable
+                            key={item.code}
+                            onPress={() => handleSelectState(item.code)}
+                            style={[styles.statePickerItem, state === item.code && styles.statePickerItemActive]}
+                          >
+                            <Text style={[styles.statePickerItemText, state === item.code && styles.statePickerItemTextActive]}>
+                              {item.name}
+                            </Text>
+                            <Text style={[styles.statePickerCode, state === item.code && styles.statePickerCodeActive]}>
+                              {item.code}
+                            </Text>
+                          </Pressable>
+                        ))}
+
+                        {filteredStates.length === 0 && (
+                          <View style={styles.emptyStateBox}>
+                            <Text style={styles.emptyStateText}>No state found.</Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
+                  </View>
+                </Modal>
               </View>
             )}
 
@@ -458,11 +526,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F6F8FB' },
   container: { padding: 20, paddingBottom: 44 },
-  header: { paddingTop: 14, paddingBottom: 20 },
-  brand: { color: '#0A3D6B', fontSize: 18, fontWeight: '900', marginBottom: 18 },
+  header: { paddingTop: 14, paddingBottom: 18 },
+  brand: { color: '#0A3D6B', fontSize: 18, fontWeight: '900', marginBottom: 16 },
   brandGold: { color: '#C8942F' },
-  title: { color: '#102A43', fontSize: 34, fontWeight: '900', lineHeight: 40, letterSpacing: -0.7 },
-  subtitle: { color: '#52606D', fontSize: 16, lineHeight: 24, marginTop: 12 },
+  title: { color: '#102A43', fontSize: 28, fontWeight: '900', lineHeight: 34, letterSpacing: -0.5 },
+  subtitle: { color: '#52606D', fontSize: 16, lineHeight: 24, marginTop: 10 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 18, shadowColor: '#0B2545', shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
   cardCenter: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#0B2545', shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
   progressTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -472,11 +540,27 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 10 },
   label: { color: '#102A43', fontSize: 21, fontWeight: '900', lineHeight: 27 },
   hint: { color: '#64748B', fontSize: 15, lineHeight: 22, marginBottom: 10 },
-  stateGrid: { gap: 8 },
-  stateButton: { borderWidth: 1, borderColor: '#D9E2EC', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, backgroundColor: '#FFFFFF' },
-  stateButtonActive: { backgroundColor: '#0A3D6B', borderColor: '#0A3D6B' },
-  stateButtonText: { color: '#243B53', fontSize: 15, fontWeight: '800' },
-  stateButtonTextActive: { color: '#FFFFFF' },
+  stateSelectButton: { borderWidth: 1, borderColor: '#D9E2EC', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 14, backgroundColor: '#F8FAFC', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stateSelectLabel: { color: '#64748B', fontSize: 12, fontWeight: '800', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
+  stateSelectValue: { color: '#102A43', fontSize: 18, fontWeight: '900' },
+  stateSelectPlaceholder: { color: '#8A99A8', fontWeight: '800' },
+  stateSelectArrow: { color: '#0A3D6B', fontSize: 26, fontWeight: '900', marginLeft: 12 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.42)', justifyContent: 'center', padding: 18 },
+  modalCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, maxHeight: '82%', shadowColor: '#0B2545', shadowOpacity: 0.15, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  modalTitle: { color: '#102A43', fontSize: 22, fontWeight: '900' },
+  modalCloseButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  modalCloseText: { color: '#102A43', fontSize: 26, fontWeight: '800', lineHeight: 28 },
+  searchInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#D9E2EC', borderRadius: 16, color: '#102A43', fontSize: 17, paddingHorizontal: 14, paddingVertical: 13, marginBottom: 12 },
+  statePickerList: { maxHeight: 430 },
+  statePickerItem: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, backgroundColor: '#FFFFFF', marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  statePickerItemActive: { backgroundColor: '#0A3D6B', borderColor: '#0A3D6B' },
+  statePickerItemText: { color: '#243B53', fontSize: 16, fontWeight: '900' },
+  statePickerItemTextActive: { color: '#FFFFFF' },
+  statePickerCode: { color: '#64748B', fontSize: 13, fontWeight: '900' },
+  statePickerCodeActive: { color: '#DDEBFF' },
+  emptyStateBox: { paddingVertical: 24, alignItems: 'center' },
+  emptyStateText: { color: '#64748B', fontSize: 15, fontWeight: '700' },
   sizeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   sizeButton: { width: 68, height: 56, borderRadius: 16, borderWidth: 1, borderColor: '#D9E2EC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   sizeButtonActive: { backgroundColor: '#0A3D6B', borderColor: '#0A3D6B' },
